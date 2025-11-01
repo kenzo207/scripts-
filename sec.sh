@@ -107,31 +107,44 @@ install_recon_tools() {
     if ! command -v amass &> /dev/null; then
         case $DISTRO in
             ubuntu|debian|linuxmint|pop|kali)
-                apt install -y amass 2>/dev/null || {
-                    wget https://github.com/owasp-amass/amass/releases/latest/download/amass_Linux_amd64.zip -O /tmp/amass.zip
-                    unzip /tmp/amass.zip -d /tmp/
-                    mv /tmp/amass_Linux_amd64/amass /usr/local/bin/
-                    rm -rf /tmp/amass*
+                apt install -y amass 2>/dev/null || snap install amass 2>/dev/null || {
+                    echo_warn "Impossible d'installer Amass automatiquement"
+                    echo_warn "Installation manuelle: snap install amass"
                 }
                 ;;
-            *)
-                wget https://github.com/owasp-amass/amass/releases/latest/download/amass_Linux_amd64.zip -O /tmp/amass.zip
-                unzip /tmp/amass.zip -d /tmp/
-                mv /tmp/amass_Linux_amd64/amass /usr/local/bin/
-                rm -rf /tmp/amass*
+            fedora|rhel|centos|rocky|almalinux)
+                dnf install -y amass 2>/dev/null || {
+                    echo_warn "Impossible d'installer Amass automatiquement"
+                    echo_warn "Installation manuelle: https://github.com/owasp-amass/amass"
+                }
+                ;;
+            arch|manjaro|endeavouros)
+                pacman -S --noconfirm amass 2>/dev/null || {
+                    echo_warn "Impossible d'installer Amass automatiquement"
+                    echo_warn "Installation manuelle: yay -S amass"
+                }
                 ;;
         esac
+    else
+        echo_warn "Amass est déjà installé"
     fi
     
     # Subfinder
     echo_info "Installation de Subfinder..."
     if ! command -v subfinder &> /dev/null; then
-        go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest 2>/dev/null || {
-            wget https://github.com/projectdiscovery/subfinder/releases/latest/download/subfinder_2.6.3_linux_amd64.zip -O /tmp/subfinder.zip
-            unzip /tmp/subfinder.zip -d /tmp/
-            mv /tmp/subfinder /usr/local/bin/
-            rm -rf /tmp/subfinder*
-        }
+        # Essayer avec Go d'abord
+        if command -v go &> /dev/null; then
+            go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+            # Copier dans /usr/local/bin si installé dans ~/go/bin
+            if [ -f "$HOME/go/bin/subfinder" ]; then
+                cp "$HOME/go/bin/subfinder" /usr/local/bin/ 2>/dev/null || true
+            fi
+        else
+            echo_warn "Go n'est pas installé. Subfinder nécessite Go."
+            echo_warn "Installation manuelle: apt install golang-go puis go install subfinder"
+        fi
+    else
+        echo_warn "Subfinder est déjà installé"
     fi
     
     # DNSenum
@@ -172,12 +185,19 @@ install_vuln_scanners() {
     # Nuclei
     echo_info "Installation de Nuclei..."
     if ! command -v nuclei &> /dev/null; then
-        go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest 2>/dev/null || {
-            wget https://github.com/projectdiscovery/nuclei/releases/latest/download/nuclei_3.2.0_linux_amd64.zip -O /tmp/nuclei.zip
-            unzip /tmp/nuclei.zip -d /tmp/
-            mv /tmp/nuclei /usr/local/bin/
-            rm -rf /tmp/nuclei*
-        }
+        # Essayer avec Go d'abord
+        if command -v go &> /dev/null; then
+            go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+            # Copier dans /usr/local/bin si installé dans ~/go/bin
+            if [ -f "$HOME/go/bin/nuclei" ]; then
+                cp "$HOME/go/bin/nuclei" /usr/local/bin/ 2>/dev/null || true
+            fi
+        else
+            echo_warn "Go n'est pas installé. Nuclei nécessite Go."
+            echo_warn "Installation manuelle: apt install golang-go puis go install nuclei"
+        fi
+    else
+        echo_warn "Nuclei est déjà installé"
     fi
     
     # Wapiti
@@ -208,12 +228,19 @@ install_web_tools() {
     # Ffuf
     echo_info "Installation de Ffuf..."
     if ! command -v ffuf &> /dev/null; then
-        go install github.com/ffuf/ffuf/v2@latest 2>/dev/null || {
-            wget https://github.com/ffuf/ffuf/releases/latest/download/ffuf_2.1.0_linux_amd64.tar.gz -O /tmp/ffuf.tar.gz
-            tar -xzf /tmp/ffuf.tar.gz -C /tmp/
-            mv /tmp/ffuf /usr/local/bin/
-            rm -rf /tmp/ffuf*
-        }
+        # Essayer avec Go d'abord
+        if command -v go &> /dev/null; then
+            go install github.com/ffuf/ffuf/v2@latest
+            # Copier dans /usr/local/bin si installé dans ~/go/bin
+            if [ -f "$HOME/go/bin/ffuf" ]; then
+                cp "$HOME/go/bin/ffuf" /usr/local/bin/ 2>/dev/null || true
+            fi
+        else
+            echo_warn "Go n'est pas installé. Ffuf nécessite Go."
+            echo_warn "Installation manuelle: apt install golang-go puis go install ffuf"
+        fi
+    else
+        echo_warn "Ffuf est déjà installé"
     fi
     
     # SQLMap
