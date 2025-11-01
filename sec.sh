@@ -56,17 +56,19 @@ install_base_dependencies() {
     case $DISTRO in
         ubuntu|debian|linuxmint|pop|kali)
             apt update
-            apt install -y curl wget git build-essential python3 python3-pip \
-                libssl-dev libffi-dev python3-dev tor proxychains4
+            apt install -y curl wget git build-essential python3 python3-pip python3-venv pipx \
+                libssl-dev libffi-dev python3-dev tor proxychains4 unzip golang-go
+            # Configurer pipx
+            pipx ensurepath 2>/dev/null || true
             ;;
         fedora|rhel|centos|rocky|almalinux)
             dnf install -y curl wget git gcc python3 python3-pip \
-                openssl-devel libffi-devel python3-devel tor proxychains-ng
+                openssl-devel libffi-devel python3-devel tor proxychains-ng unzip golang
             ;;
         arch|manjaro|endeavouros)
             pacman -Syu --noconfirm
             pacman -S --noconfirm curl wget git base-devel python python-pip \
-                openssl tor proxychains-ng
+                openssl tor proxychains-ng unzip go
             ;;
     esac
     
@@ -202,7 +204,21 @@ install_vuln_scanners() {
     
     # Wapiti
     echo_info "Installation de Wapiti..."
-    pip3 install wapiti3 --break-system-packages 2>/dev/null || pip3 install wapiti3
+    # Essayer d'abord avec pipx (recommandé pour Ubuntu 24.04+)
+    if command -v pipx &> /dev/null; then
+        pipx install wapiti3 2>/dev/null || echo_warn "Échec de l'installation de Wapiti via pipx"
+    else
+        # Installer pipx si pas présent
+        case $DISTRO in
+            ubuntu|debian|linuxmint|pop|kali)
+                apt install -y pipx
+                pipx install wapiti3 2>/dev/null || pip3 install wapiti3 --break-system-packages
+                ;;
+            *)
+                pip3 install wapiti3 --break-system-packages 2>/dev/null || pip3 install wapiti3
+                ;;
+        esac
+    fi
     
     echo_info "Scanners de vulnérabilités installés"
 }
