@@ -1,16 +1,12 @@
 #!/bin/bash
 
-# Script d'installation universel pour Linux, macOS et Windows (Git Bash/WSL)
-# Détecte automatiquement l'OS et installe les dépendances appropriées
-
 set -e
 
-# Couleurs pour l'affichage
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 echo_info() {
     echo -e "${GREEN}[INFO]${NC} $1"
@@ -28,7 +24,6 @@ echo_step() {
     echo -e "${BLUE}[STEP]${NC} $1"
 }
 
-# Détecter l'OS
 detect_os() {
     case "$(uname -s)" in
         Linux*)     OS=Linux;;
@@ -45,7 +40,6 @@ detect_os() {
     fi
 }
 
-# Détecter la distribution Linux
 detect_linux_distro() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
@@ -59,12 +53,10 @@ detect_linux_distro() {
     echo_info "Distribution Linux détectée: $DISTRO $VERSION"
 }
 
-# Vérifier si une commande existe
 command_exists() {
     command -v "$1" &> /dev/null
 }
 
-# Installation Python et pip (universel)
 install_python() {
     echo_step "Vérification de Python..."
     
@@ -88,7 +80,6 @@ install_python() {
         esac
     fi
     
-    # Vérifier pip
     if command_exists pip3; then
         echo_info "pip est déjà installé"
     else
@@ -106,7 +97,6 @@ install_python() {
     fi
 }
 
-# Installation Python sur Linux
 install_python_linux() {
     case $DISTRO in
         ubuntu|debian|linuxmint|pop)
@@ -126,7 +116,6 @@ install_python_linux() {
     esac
 }
 
-# Installation pip sur Linux
 install_pip_linux() {
     case $DISTRO in
         ubuntu|debian|linuxmint|pop)
@@ -141,7 +130,6 @@ install_pip_linux() {
     esac
 }
 
-# Installation Python sur macOS
 install_python_macos() {
     if command_exists brew; then
         echo_info "Installation de Python via Homebrew..."
@@ -153,7 +141,6 @@ install_python_macos() {
     fi
 }
 
-# Installation Git (universel)
 install_git() {
     echo_step "Vérification de Git..."
     
@@ -196,7 +183,6 @@ install_git() {
     echo_info "Git installé avec succès"
 }
 
-# Installation Docker (universel)
 install_docker() {
     echo_step "Vérification de Docker..."
     
@@ -210,12 +196,10 @@ install_docker() {
     
     case $OS in
         Linux)
-            # Installation via script officiel Docker
             curl -fsSL https://get.docker.com -o get-docker.sh
             sudo sh get-docker.sh
             rm get-docker.sh
             
-            # Démarrer et activer Docker
             sudo systemctl enable docker
             sudo systemctl start docker
             
@@ -233,7 +217,6 @@ install_docker() {
     esac
 }
 
-# Installation VS Code (universel)
 install_vscode() {
     echo_step "Vérification de VS Code..."
     
@@ -278,7 +261,6 @@ install_vscode() {
     esac
 }
 
-# Installation Node.js et npm (universel)
 install_nodejs() {
     echo_step "Vérification de Node.js..."
     
@@ -319,22 +301,64 @@ install_nodejs() {
     esac
 }
 
-# Installation des dépendances Python du projet
 install_python_dependencies() {
     echo_step "Installation des dépendances Python..."
     
-    if [ -f "requirements.txt" ]; then
-        echo_info "Installation depuis requirements.txt..."
-        pip3 install -r requirements.txt
+    # Détecter si on est sur Ubuntu 23.04+ avec PEP 668
+    UBUNTU_VERSION=""
+    if [ "$OS" = "Linux" ] && [ "$DISTRO" = "ubuntu" ]; then
+        UBUNTU_VERSION=$(echo $VERSION | cut -d'.' -f1)
+    fi
+    
+    # Sur Ubuntu 23.04+, utiliser environnement virtuel
+    if [ "$DISTRO" = "ubuntu" ] && [ ! -z "$UBUNTU_VERSION" ] && [ "$UBUNTU_VERSION" -ge 23 ]; then
+        echo_warn "Ubuntu $VERSION détecté - utilisation de l'environnement virtuel Python"
+        
+        # Installer python3-venv si nécessaire
+        if ! dpkg -l | grep -q python3-venv; then
+            echo_info "Installation de python3-venv..."
+            sudo apt install -y python3-venv
+        fi
+        
+        # Créer un environnement virtuel si nécessaire
+        if [ ! -d "venv" ]; then
+            echo_info "Création de l'environnement virtuel..."
+            python3 -m venv venv
+            echo_info "Environnement virtuel créé dans ./venv"
+        fi
+        
+        # Activer l'environnement virtuel et installer les dépendances
+        echo_info "Installation des dépendances dans l'environnement virtuel..."
+        source venv/bin/activate
+        
+        if [ -f "requirements.txt" ]; then
+            pip install -r requirements.txt
+        else
+            echo_warn "Fichier requirements.txt non trouvé"
+            echo_info "Installation des dépendances de base..."
+            pip install requests
+        fi
+        
+        deactivate
+        
         echo_info "Dépendances Python installées avec succès"
+        echo_warn "Pour utiliser les scripts, activez l'environnement virtuel:"
+        echo_warn "  source venv/bin/activate"
+        
     else
-        echo_warn "Fichier requirements.txt non trouvé"
-        echo_info "Installation des dépendances de base..."
-        pip3 install requests
+        # Installation classique pour les autres systèmes
+        if [ -f "requirements.txt" ]; then
+            echo_info "Installation depuis requirements.txt..."
+            pip3 install -r requirements.txt --user
+            echo_info "Dépendances Python installées avec succès"
+        else
+            echo_warn "Fichier requirements.txt non trouvé"
+            echo_info "Installation des dépendances de base..."
+            pip3 install requests --user
+        fi
     fi
 }
 
-# Installation des utilitaires de base
 install_basic_utilities() {
     echo_step "Installation des utilitaires de base..."
     
@@ -363,7 +387,6 @@ install_basic_utilities() {
     esac
 }
 
-# Menu interactif
 show_menu() {
     echo ""
     echo "========================================="
@@ -424,7 +447,6 @@ show_menu() {
     esac
 }
 
-# Installation complète
 install_all() {
     echo_info "=== Installation complète ==="
     install_python
@@ -436,7 +458,6 @@ install_all() {
     install_python_dependencies
 }
 
-# Installation personnalisée
 custom_install() {
     echo ""
     echo "Installation personnalisée:"
@@ -459,7 +480,6 @@ custom_install() {
     [ "$install_deps" = "o" ] && install_python_dependencies
 }
 
-# Fonction principale
 main() {
     echo_info "=== Script d'installation universel ==="
     echo ""
@@ -470,7 +490,6 @@ main() {
         detect_linux_distro
     fi
     
-    # Vérifier les permissions pour Linux
     if [ "$OS" = "Linux" ] && [ "$EUID" -eq 0 ]; then
         echo_warn "Ce script est exécuté en tant que root"
         echo_warn "Certaines installations peuvent nécessiter des permissions utilisateur"
@@ -486,5 +505,4 @@ main() {
     fi
 }
 
-# Exécution
 main
